@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Jogo de Pular Obstáculos</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: #111;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 20px;
+    }
+
+    #game {
+      position: relative;
+      width: 600px;
+      height: 300px;
+      background: #222;
+      overflow: hidden;
+      border: 2px solid #555;
+    }
+
+    #player {
+      position: absolute;
+      bottom: 0;
+      left: 50px;
+      width: 30px;
+      height: 30px;
+      background: #4caf50;
+    }
+
+    .obstacle {
+      position: absolute;
+      bottom: 0;
+      width: 30px;
+      height: 30px;
+      background: #e91e63;
+      animation: moveObstacle 2s linear forwards;
+    }
+
+    @keyframes moveObstacle {
+      from { left: 600px; }
+      to { left: -30px; }
+    }
+
+    #game-over {
+      display: none;
+      font-size: 2em;
+      color: red;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pressione Espaço para Pular!</h1>
+  <div id="game">
+    <div id="player"></div>
+  </div>
+  <div id="game-over">💀 Fim de jogo! Recarregue para jogar de novo.</div>
+
+  <script>
+    const player = document.getElementById('player');
+    const game = document.getElementById('game');
+    const gameOverText = document.getElementById('game-over');
+
+    let isJumping = false;
+    let gameOver = false;
+
+    function jump() {
+      if (isJumping || gameOver) return;
+      isJumping = true;
+      let up = 0;
+
+      const jumpInterval = setInterval(() => {
+        if (up >= 100) {
+          clearInterval(jumpInterval);
+          const downInterval = setInterval(() => {
+            if (up <= 0) {
+              clearInterval(downInterval);
+              isJumping = false;
+            }
+            up -= 5;
+            player.style.bottom = up + 'px';
+          }, 20);
+        } else {
+          up += 5;
+          player.style.bottom = up + 'px';
+        }
+      }, 20);
+    }
+
+    function createObstacle() {
+      if (gameOver) return;
+
+      const obstacle = document.createElement('div');
+      obstacle.classList.add('obstacle');
+      obstacle.style.left = '600px';
+      game.appendChild(obstacle);
+
+      const move = setInterval(() => {
+        const obstacleLeft = parseInt(getComputedStyle(obstacle).left);
+        const playerBottom = parseInt(getComputedStyle(player).bottom);
+
+        if (obstacleLeft <= 80 && obstacleLeft >= 50 && playerBottom <= 30) {
+          clearInterval(move);
+          gameOver = true;
+          gameOverText.style.display = 'block';
+        }
+
+        if (obstacleLeft <= -30) {
+          clearInterval(move);
+          game.removeChild(obstacle);
+        }
+      }, 20);
+
+      setTimeout(createObstacle, Math.random() * 2000 + 1000);
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        jump();
+      }
+    });
+
+    createObstacle();
+  </script>
+</body>
+</html>
