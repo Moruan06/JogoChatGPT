@@ -2,135 +2,113 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Jogo de Pular Obstáculos</title>
+  <title>Jogo da Cobrinha</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      overflow: hidden;
-      font-family: sans-serif;
       background: #111;
-      color: #fff;
       display: flex;
-      flex-direction: column;
       align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
+      font-family: sans-serif;
     }
-
-    h1 {
-      margin: 20px;
-    }
-
-    #game {
-      position: relative;
-      width: 600px;
-      height: 300px;
+    canvas {
       background: #222;
-      overflow: hidden;
-      border: 2px solid #555;
+      box-shadow: 0 0 10px #0f0;
+      border: 2px solid #0f0;
     }
-
-    #player {
+    #score {
       position: absolute;
-      bottom: 0;
-      left: 50px;
-      width: 30px;
-      height: 30px;
-      background: #4caf50;
-    }
-
-    .obstacle {
-      position: absolute;
-      bottom: 0;
-      width: 30px;
-      height: 30px;
-      background: #e91e63;
-      animation: moveObstacle 2s linear forwards;
-    }
-
-    @keyframes moveObstacle {
-      from { left: 600px; }
-      to { left: -30px; }
-    }
-
-    #game-over {
-      display: none;
-      font-size: 2em;
-      color: red;
-      margin-top: 20px;
+      top: 10px;
+      left: 10px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
-  <h1>Pressione Espaço para Pular!</h1>
-  <div id="game">
-    <div id="player"></div>
-  </div>
-  <div id="game-over">💀 Fim de jogo! Recarregue para jogar de novo.</div>
+  <div id="score">Pontos: 0</div>
+  <canvas id="game" width="400" height="400"></canvas>
 
   <script>
-    const player = document.getElementById('player');
-    const game = document.getElementById('game');
-    const gameOverText = document.getElementById('game-over');
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const box = 20;
+    const canvasSize = 400;
+    let score = 0;
+    let snake = [{ x: 9 * box, y: 9 * box }];
+    let food = {
+      x: Math.floor(Math.random() * (canvas.width / box)) * box,
+      y: Math.floor(Math.random() * (canvas.height / box)) * box,
+    };
+    let direction = "";
 
-    let isJumping = false;
-    let gameOver = false;
-
-    function jump() {
-      if (isJumping || gameOver) return;
-      isJumping = true;
-      let up = 0;
-
-      const jumpInterval = setInterval(() => {
-        if (up >= 100) {
-          clearInterval(jumpInterval);
-          const downInterval = setInterval(() => {
-            if (up <= 0) {
-              clearInterval(downInterval);
-              isJumping = false;
-            }
-            up -= 5;
-            player.style.bottom = up + 'px';
-          }, 20);
-        } else {
-          up += 5;
-          player.style.bottom = up + 'px';
-        }
-      }, 20);
-    }
-
-    function createObstacle() {
-      if (gameOver) return;
-
-      const obstacle = document.createElement('div');
-      obstacle.classList.add('obstacle');
-      obstacle.style.left = '600px';
-      game.appendChild(obstacle);
-
-      const move = setInterval(() => {
-        const obstacleLeft = parseInt(getComputedStyle(obstacle).left);
-        const playerBottom = parseInt(getComputedStyle(player).bottom);
-
-        if (obstacleLeft <= 80 && obstacleLeft >= 50 && playerBottom <= 30) {
-          clearInterval(move);
-          gameOver = true;
-          gameOverText.style.display = 'block';
-        }
-
-        if (obstacleLeft <= -30) {
-          clearInterval(move);
-          game.removeChild(obstacle);
-        }
-      }, 20);
-
-      setTimeout(createObstacle, Math.random() * 2000 + 1000);
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space') {
-        jump();
-      }
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      else if (event.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+      else if (event.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      else if (event.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
     });
 
-    createObstacle();
+    function draw() {
+      ctx.clearRect(0, 0, canvasSize, canvasSize);
+
+      // Fundo
+      ctx.fillStyle = "#222";
+      ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+      // Cobrinha
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "#0f0" : "#0a0";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      // Comida
+      ctx.fillStyle = "red";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      // Posição atual da cabeça
+      let headX = snake[0].x;
+      let headY = snake[0].y;
+
+      // Direção
+      if (direction === "UP") headY -= box;
+      if (direction === "DOWN") headY += box;
+      if (direction === "LEFT") headX -= box;
+      if (direction === "RIGHT") headX += box;
+
+      // Game over
+      if (
+        headX < 0 || headX >= canvasSize ||
+        headY < 0 || headY >= canvasSize ||
+        snake.some((segment, index) => index !== 0 && segment.x === headX && segment.y === headY)
+      ) {
+        clearInterval(game);
+        alert("Fim de jogo! Pontuação: " + score);
+        location.reload();
+        return;
+      }
+
+      // Nova cabeça
+      const newHead = { x: headX, y: headY };
+      snake.unshift(newHead);
+
+      // Comer comida
+      if (headX === food.x && headY === food.y) {
+        score++;
+        document.getElementById("score").innerText = "Pontos: " + score;
+        food = {
+          x: Math.floor(Math.random() * (canvas.width / box)) * box,
+          y: Math.floor(Math.random() * (canvas.height / box)) * box,
+        };
+      } else {
+        snake.pop();
+      }
+    }
+
+    const game = setInterval(draw, 100);
   </script>
 </body>
 </html>
